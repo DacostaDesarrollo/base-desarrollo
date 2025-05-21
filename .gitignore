@@ -1,0 +1,5 @@
+/vendor
+.env
+.qodo
+/var/cache/*
+/var/log/*
