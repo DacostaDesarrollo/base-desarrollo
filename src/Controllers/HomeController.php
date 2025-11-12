@@ -8,22 +8,27 @@ use Psr\Container\ContainerInterface;
 use Illuminate\Database\Capsule\Manager as DB;
 use Src\Models\Usuario as Usuario;
 
-class HomeController {
-
-    public function __construct(){}
+class HomeController extends BaseController
+{
+    public function __construct(ContainerInterface $container)
+    {
+        parent::__construct($container);
+    }
     
     public function home(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
-      $users = Usuario::all();
-      //$session = $request->getAttribute('session');
-      $response->getBody()->write(json_encode($users));
-
-      return $response->withHeader('Content-Type', 'application/json');
+        try {
+            $users = Usuario::all();
+            return $this->respondWithData($response, $users);
+        } catch (\Exception $e) {
+            return $this->respondWithError($response, $e->getMessage(), 500);
+        }
     }
+
     public function statusApi(ServerRequestInterface $request, ResponseInterface $response, array $args = []): ResponseInterface
     {
-		$status = [
-			'Version_api' => '1.0.0',
+        $status = [
+            'version_api' => '1.0.0',
             'php_version' => phpversion(),
             'db_connection' => false,
             'error' => null,
@@ -33,14 +38,10 @@ class HomeController {
             // Verifica la conexión a la base de datos
             DB::connection()->getPdo();
             $status['db_connection'] = true;
-
+            return $this->respondWithData($response, $status);
         } catch (\Exception $e) {
-            // Si ocurre un error, lo registra en el estado
             $status['error'] = $e->getMessage();
+            return $this->respondWithError($response, $e->getMessage(), 500);
         }
-
-        $response->getBody()->write(json_encode($status));
-
-        return $response->withHeader('Content-Type', 'application/json');
     }
 }

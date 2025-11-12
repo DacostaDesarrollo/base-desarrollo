@@ -8,11 +8,14 @@ services:
       - .:/var/www/html
       - ./vendor:/var/www/html/vendor
     depends_on:
-      - ${DB_DRIVER}
+      - postgres
     networks:
       - app_network
     environment:
-      DB_HOST: ${DB_DRIVER}
+      DB_HOST: ${DB_HOST}
+    profiles:
+      - postgres
+      - mysql
 
   web:
     image: nginx:latest
@@ -26,6 +29,9 @@ services:
       - app
     networks:
       - app_network
+    profiles:
+      - postgres
+      - mysql
 
   # POSTGRES + PGADMIN (Perfil postgres)
   postgres:
