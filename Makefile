@@ -1,4 +1,4 @@
-.PHONY: up-mysql up-postgres down logs clean help migrate migrate-rollback
+.PHONY: up-mysql up-postgres down logs clean help migrate migrate-rollback composer-install
 
 # Variables
 DOCKER_COMPOSE = docker-compose
@@ -6,13 +6,14 @@ DOCKER_COMPOSE = docker-compose
 # Comandos principales
 help:
 	@echo "Comandos disponibles:"
-	@echo "  make up-mysql     - Levanta el proyecto con MySQL"
-	@echo "  make up-postgres  - Levanta el proyecto con PostgreSQL"
-	@echo "  make down        - Detiene todos los contenedores"
-	@echo "  make logs        - Muestra los logs de los contenedores"
-	@echo "  make clean       - Limpia los contenedores y volúmenes"
-	@echo "  make migrate     - Ejecuta las migraciones de la base de datos"
-	@echo "  make migrate-rollback - Revierte la última migración"
+	@echo "  make up-mysql          - Levanta el proyecto con MySQL"
+	@echo "  make up-postgres       - Levanta el proyecto con PostgreSQL"
+	@echo "  make down              - Detiene todos los contenedores"
+	@echo "  make logs              - Muestra los logs de los contenedores"
+	@echo "  make clean             - Limpia los contenedores y volúmenes"
+	@echo "  make composer-install  - Instala dependencias de Composer"
+	@echo "  make migrate           - Ejecuta las migraciones de la base de datos"
+	@echo "  make migrate-rollback  - Revierte la última migración"
 
 up-mysql:
 	@echo "Levantando proyecto con MySQL..."
@@ -44,6 +45,11 @@ clean:
 	@echo "Limpiando contenedores y volúmenes..."
 	$(DOCKER_COMPOSE) down -v
 	@echo "Limpieza completada"
+
+composer-install:
+	@echo "Instalando dependencias de Composer..."
+	@docker exec -it --user $(shell id -u):$(shell id -g) php_app composer install
+	@echo "Dependencias instaladas"
 
 migrate:
 	@echo "Ejecutando migraciones..."

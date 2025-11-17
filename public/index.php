@@ -46,8 +46,11 @@ $capsule->bootEloquent();
 // Crear la aplicación Slim
 $app = AppFactory::createFromContainer($container);
 
-// Configurar el base path
-$app->setBasePath($env->getBasePath());
+// Configurar el base path PRIMERO
+/* $basePath = $env->getBasePath();
+if (!empty($basePath)) {
+    $app->setBasePath($basePath);
+} */
 
 // Agregar middleware de profiling solo en desarrollo
 if (!$env->isProduction()) {
@@ -81,12 +84,12 @@ register_shutdown_function($shutdownHandler);
 // Agregar middleware de parsing del body
 $app->addBodyParsingMiddleware();
 
-// Agregar middleware de routing
-$app->addRoutingMiddleware();
-
-// Cargar rutas
+// Cargar rutas ANTES del RoutingMiddleware
 $routes = require __DIR__ . '/../src/routes.php';
 $routes($app);
+
+// Agregar middleware de routing
+$app->addRoutingMiddleware();
 
 // Ejecutar la aplicación
 $app->run();
