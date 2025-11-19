@@ -26,7 +26,6 @@ class FilesController {
     private  $Spreadsheet;
     private  $uploads;
     public function __construct(ContainerInterface $c){
-        var_dump($c);
         $this->db = $c->get('db');
         $this->uploads = $c->get('settings')['uploads'];
         $this->Spreadsheet = $c->get(Spreadsheet::class);

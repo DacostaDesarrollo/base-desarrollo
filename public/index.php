@@ -54,13 +54,14 @@ if (!empty($basePath)) {
 
 // Agregar middleware de profiling solo en desarrollo
 if (!$env->isProduction()) {
-    $app->add($container->get('profilingMiddleware'));
+    $app->add($container->get(ProfilingMiddleware::class));
 }
 
-// Crear el manejador de errores personalizado
+// Crear el manejador de errores personalizado con logger
 $callableResolver = $app->getCallableResolver();
 $responseFactory = $app->getResponseFactory();
-$errorHandler = new HttpErrorHandler($callableResolver, $responseFactory);
+$loggerService = $container->get(\Src\Services\LoggerService::class);
+$errorHandler = new HttpErrorHandler($callableResolver, $responseFactory, $loggerService);
 
 // Agregar middleware de manejo de errores
 $errorMiddleware = new ErrorMiddleware(

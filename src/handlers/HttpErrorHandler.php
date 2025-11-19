@@ -6,6 +6,7 @@ namespace Src\handlers;
 
 use Src\Actions\ActionError;
 use Src\Actions\ActionPayload;
+use Src\Services\LoggerService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Exception\HttpBadRequestException;
@@ -22,11 +23,15 @@ use Slim\Psr7\Factory\ResponseFactory;
 
 class HttpErrorHandler extends ErrorHandler
 {
+    private ?LoggerService $loggerService;
+
     public function __construct(
         CallableResolverInterface $callableResolver,
-        ResponseFactory $responseFactory
+        ResponseFactory $responseFactory,
+        ?LoggerService $loggerService = null
     ) {
         parent::__construct($callableResolver, $responseFactory);
+        $this->loggerService = $loggerService;
     }
 
     /**
@@ -60,6 +65,16 @@ class HttpErrorHandler extends ErrorHandler
             $description = 'Not implemented.';
         }
 
+        // Registrar el error automáticamente con contexto completo
+        if ($this->loggerService !== null && $statusCode >= 500) {
+            // Solo registrar errores del servidor (5xx), no errores del cliente (4xx)
+            $this->loggerService->logError(
+                $exception,
+                $this->request,
+                ['http_status' => $statusCode]
+            );
+        }
+
         $error = [
             'statusCode' => $statusCode,
             'error' => [
@@ -80,3 +95,4 @@ class HttpErrorHandler extends ErrorHandler
             ->withStatus($statusCode);
     }
 }
+

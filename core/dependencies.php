@@ -15,11 +15,16 @@ use Slim\App;
 use Slim\Factory\AppFactory;
 use Slim\Middleware\ErrorMiddleware;
 use Src\Services\EmailService;
+use Src\Services\LoggerService;
 use Src\Services\Auth\AuthService;
+use Monolog\Handler\RotatingFileHandler;
+use Src\Repositories\Auth\AuthRepositoryInterface;
+use Src\Repositories\Auth\EloquentAuthRepository;
 use Src\Middlewares\Auth\AuthMiddleware;
 use Src\Middlewares\Auth\RoleMiddleware;
 use Src\Middlewares\Performance\ProfilingMiddleware;
 use Src\Controllers\BaseController;
+use Src\Controllers\Auth\AuthController;
 use Src\Controllers\UserController;
 use Src\Controllers\HomeController;
 use Src\Controllers\CategoryController;
@@ -104,88 +109,93 @@ return [
         return $twig;
     },
 
-    // Email Service
-    'emailService' => function (ContainerInterface $c) {
-        return new EmailService(
-            $c->get('settings')['smtp'],
-            $c->get('twig')
+    // Logger (Monolog)
+    LoggerInterface::class => function (ContainerInterface $c) {
+        $settings = $c->get('settings')['logger'];
+        $logger = new Logger($settings['name']);
+
+        // Handler para errores - archivos rotativos diarios
+        $errorHandler = new RotatingFileHandler(
+            __DIR__ . '/../logs/errors.log',
+            30, // Mantener 30 días de logs
+            Logger::ERROR
         );
+        $logger->pushHandler($errorHandler);
+
+        // Handler para warnings
+        $warningHandler = new RotatingFileHandler(
+            __DIR__ . '/../logs/warnings.log',
+            30,
+            Logger::WARNING
+        );
+        $logger->pushHandler($warningHandler);
+
+        // Handler para info (eventos generales)
+        $infoHandler = new RotatingFileHandler(
+            __DIR__ . '/../logs/info.log',
+            7, // Info solo 7 días
+            Logger::INFO
+        );
+        $logger->pushHandler($infoHandler);
+
+        $logger->pushProcessor(new UidProcessor());
+        return $logger;
     },
+
+    // Logger Service (wrapper con contexto)
+    LoggerService::class => fn(ContainerInterface $c) => new LoggerService(
+        $c->get(LoggerInterface::class),
+        $c->get('settings')
+    ),
+
+    // Email Service
+    EmailService::class => fn(ContainerInterface $c) => new EmailService(
+        $c->get('settings')['smtp'],
+        $c->get('twig')
+    ),
+
+    // Auth Repository
+    AuthRepositoryInterface::class => fn() => new EloquentAuthRepository(),
 
     // Auth Service
-    'authService' => function (ContainerInterface $c) {
-        $settings = $c->get('settings');
-        if (!isset($settings['secretKey']) || empty($settings['secretKey'])) {
-            throw new \RuntimeException('La clave secreta JWT no está configurada');
-        }
-        return new AuthService(
-            $settings['secretKey'],
-            $c->get('emailService')
-        );
-    },
+    AuthService::class => fn(ContainerInterface $c) => new AuthService(
+        $c->get(AuthRepositoryInterface::class),
+        $c->get('settings')['secretKey'],
+        $c->get(EmailService::class)
+    ),
 
-    // Auth Middleware
-    'authMiddleware' => function (ContainerInterface $c) {
-        return new AuthMiddleware($c->get('authService'));
-    },
+    // Auth Controller
+    AuthController::class => fn(ContainerInterface $c) => new AuthController($c),
 
-    // Role Middleware
-    'roleMiddleware' => function (ContainerInterface $container) {
-        return new RoleMiddleware($container->get(ResponseFactoryInterface::class));
-    },
+    // Middlewares
+    AuthMiddleware::class => fn(ContainerInterface $c) => new AuthMiddleware($c->get(AuthService::class)),
+    
+    RoleMiddleware::class => fn(ContainerInterface $c) => new RoleMiddleware($c->get(ResponseFactoryInterface::class)),
+    
+    ProfilingMiddleware::class => fn() => new ProfilingMiddleware(),
 
-    // Base Controller
-    BaseController::class => function (ContainerInterface $c) {
-        return new BaseController($c);
-    },
-
-    // Controllers (lazy loaded)
-    'userController' => function (ContainerInterface $c) {
-        return new UserController($c);
-    },
-
-    'homeController' => function (ContainerInterface $c) {
-        return new HomeController($c);
-    },
-
-    'categoryController' => function (ContainerInterface $c) {
-        return new CategoryController($c);
-    },
-
-    'countryController' => function (ContainerInterface $c) {
-        return new CountryController($c);
-    },
-
-    'filesController' => function (ContainerInterface $c) {
-        return new FilesController($c);
-    },
-
-    'suscriptionController' => function (ContainerInterface $c) {
-        return new SuscriptionController($c);
-    },
-
-    'invoiceController' => function (ContainerInterface $c) {
-        return new InvoiceController($c);
-    },
-
-    'paymentsController' => function (ContainerInterface $c) {
-        return new PaymentsController($c);
-    },
-
-    'proyectController' => function (ContainerInterface $c) {
-        return new ProyectController($c);
-    },
-
-    'adwardController' => function (ContainerInterface $c) {
-        return new AdwardController($c);
-    },
-
-    'evaluationCriteriaController' => function (ContainerInterface $c) {
-        return new EvaluationCriteriaController($c);
-    },
-
-    // Profiling Middleware
-    'profilingMiddleware' => function (ContainerInterface $container) {
-        return new ProfilingMiddleware();
-    },
+    // Controllers
+    BaseController::class => fn(ContainerInterface $c) => new BaseController($c),
+    
+    UserController::class => fn(ContainerInterface $c) => new UserController($c),
+    
+    HomeController::class => fn(ContainerInterface $c) => new HomeController($c),
+    
+    CategoryController::class => fn(ContainerInterface $c) => new CategoryController($c),
+    
+    CountryController::class => fn(ContainerInterface $c) => new CountryController($c),
+    
+    FilesController::class => fn(ContainerInterface $c) => new FilesController($c),
+    
+    SuscriptionController::class => fn(ContainerInterface $c) => new SuscriptionController($c),
+    
+    InvoiceController::class => fn(ContainerInterface $c) => new InvoiceController($c),
+    
+    PaymentsController::class => fn(ContainerInterface $c) => new PaymentsController($c),
+    
+    ProyectController::class => fn(ContainerInterface $c) => new ProyectController($c),
+    
+    AdwardController::class => fn(ContainerInterface $c) => new AdwardController($c),
+    
+    EvaluationCriteriaController::class => fn(ContainerInterface $c) => new EvaluationCriteriaController($c),
 ];

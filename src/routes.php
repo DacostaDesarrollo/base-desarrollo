@@ -9,6 +9,13 @@ use Slim\Interfaces\RouteCollectorProxyInterface as Group;
 use Slim\Exception\HttpNotFoundException;
 use Src\Middlewares\Files\UploadedFilesMiddleware;
 use Src\Middlewares\Files\FilesValidMiddleware;
+use Src\Controllers\AuthController;
+use Src\Controllers\UserController;
+use Src\Controllers\HomeController;
+use Src\Controllers\CountryController;
+use Src\Controllers\FilesController;
+use Src\Controllers\SuscriptionController;
+use Src\Controllers\PaymentsController;
 
 return function (App $app) {
     $container = $app->getContainer();
@@ -18,105 +25,106 @@ return function (App $app) {
     });
 
     $app->get('/', function(Request $request, Response $response, array $args = []) use ($container) {
-        return $container->get('homeController')->statusApi($request, $response, $args);
+        return $container->get(HomeController::class)->statusApi($request, $response, $args);
     });
 
     $app->group('/users', function (Group $group) use ($container) {
         $group->get('', function(Request $request, Response $response) use ($container) {
-            return $container->get('userController')->listUsers($request, $response);
+            return $container->get(UserController::class)->listUsers($request, $response);
         });
         $group->get('/{id}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('userController')->getUserId($request, $response, $args);
+            return $container->get(UserController::class)->getUserId($request, $response, $args);
         });
         $group->put('/{idUser}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('userController')->updateUser($request, $response, $args);
+            return $container->get(UserController::class)->updateUser($request, $response, $args);
         });
         $group->delete('/{idUser}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('userController')->deleteUser($request, $response, $args);
+            return $container->get(UserController::class)->deleteUser($request, $response, $args);
         });
     })->add(function($request, $handler) use ($container) {
-        $roleMiddleware = $container->get('roleMiddleware');
+        $roleMiddleware = $container->get(\Src\Middlewares\Auth\RoleMiddleware::class);
         return $roleMiddleware->setRoles(['admin', 'jurado'])->process($request, $handler);
-    })->add($container->get('authMiddleware'));
+    })->add($container->get(\Src\Middlewares\Auth\AuthMiddleware::class));
 
     $app->group('/auth', function (Group $group) use ($container) {
+        
         $group->post('/login', function(Request $request, Response $response, $arg) use ($container) {
-            return $container->get('authService')->login($request, $response, $arg);
+            return $container->get(AuthController::class)->login($request, $response, $arg);
         });
         $group->post('/register', function(Request $request, Response $response, $arg) use ($container) {
-            return $container->get('authService')->register($request, $response, $arg);
+            return $container->get(AuthController::class)->register($request, $response, $arg);
         });
         $group->post('/forgot-password', function(Request $request, Response $response, $arg) use ($container) {
-            return $container->get('authService')->forgotPassword($request, $response, $arg);
+            return $container->get(AuthController::class)->forgotPassword($request, $response, $arg);
         });
         $group->post('/reset-password', function(Request $request, Response $response, $arg) use ($container) {
-            return $container->get('authService')->resetPassword($request, $response, $arg);
+            return $container->get(AuthController::class)->newPassword($request, $response, $arg);
         });
     });
 
     $app->group('/payments', function (Group $group) use ($container) {
         $group->post('/method/payu/create', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('paymentsController')->createPayment($request, $response, $args);
+            return $container->get(PaymentsController::class)->createPayment($request, $response, $args);
         });
         $group->post('/method/payu/responseUrl', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('paymentsController')->responseUrl($request, $response, $args);
+            return $container->get(PaymentsController::class)->responseUrl($request, $response, $args);
         });
         $group->post('/method/payu/confirmationUrl', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('paymentsController')->confirmationUrl($request, $response, $args);
+            return $container->get(PaymentsController::class)->confirmationUrl($request, $response, $args);
         });
         $group->get('/method/payu/status/{id}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('paymentsController')->getPaymentStatus($request, $response, $args);
+            return $container->get(PaymentsController::class)->getPaymentStatus($request, $response, $args);
         });
         $group->get('/method/payu/list', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('paymentsController')->listPayments($request, $response, $args);
+            return $container->get(PaymentsController::class)->listPayments($request, $response, $args);
         });
         $group->get('/method/payu/list/{userId}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('paymentsController')->listUserPayments($request, $response, $args);
+            return $container->get(PaymentsController::class)->listUserPayments($request, $response, $args);
         });
-    })->add($container->get('authMiddleware'));
+    })->add($container->get(\Src\Middlewares\Auth\AuthMiddleware::class));
 
     $app->group('/suscriptions', function (Group $group) use ($container) {
         $group->get('', function(Request $request, Response $response) use ($container) {
-            return $container->get('suscriptionController')->listSuscriptions($request, $response);
+            return $container->get(SuscriptionController::class)->listSuscriptions($request, $response);
         });
         $group->get('/{id}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('suscriptionController')->getSuscriptionId($request, $response, $args);
+            return $container->get(SuscriptionController::class)->getSuscriptionId($request, $response, $args);
         });
         $group->post('', function(Request $request, Response $response) use ($container) {
-            return $container->get('suscriptionController')->createSuscription($request, $response);
+            return $container->get(SuscriptionController::class)->createSuscription($request, $response);
         });
         $group->put('/{id}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('suscriptionController')->updateSuscription($request, $response, $args);
+            return $container->get(SuscriptionController::class)->updateSuscription($request, $response, $args);
         });
         $group->delete('/{id}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('suscriptionController')->deleteSuscription($request, $response, $args);
+            return $container->get(SuscriptionController::class)->deleteSuscription($request, $response, $args);
         });
-    })->add($container->get('authMiddleware'));
+    })->add($container->get(\Src\Middlewares\Auth\AuthMiddleware::class));
 
      /**
      * Rotas de los países
     */
     $app->group('/paises', function (Group $group) use ($container) {
         $group->get('', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('countryController')->getCountrys($request, $response, $args);
+            return $container->get(CountryController::class)->getCountrys($request, $response, $args);
         });
     });
     //Ruta para subir archivos
     $app->group('/files', function (Group $group) use ($container) {
         $group->post('', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('filesController')->saveFile($request, $response, $args);
+            return $container->get(FilesController::class)->saveFile($request, $response, $args);
         })->add(new FilesValidMiddleware())->add(new UploadedFilesMiddleware($container->get('settings')['uploads']));
         
         $group->get('/group', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('filesController')->getFilesGroup($request, $response, $args);
+            return $container->get(FilesController::class)->getFilesGroup($request, $response, $args);
         });
         
         $group->get('/assets/{path}/{filename}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('filesController')->getStreamFile($request, $response, $args);
+            return $container->get(FilesController::class)->getStreamFile($request, $response, $args);
         });
         
         $group->delete('/{id}', function(Request $request, Response $response, $args) use ($container) {
-            return $container->get('filesController')->deleteFile($request, $response, $args);
+            return $container->get(FilesController::class)->deleteFile($request, $response, $args);
         });
     });
 
